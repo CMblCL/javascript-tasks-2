@@ -65,10 +65,36 @@ module.exports.remove = function remove(query) {
 */
 module.exports.importFromCsv = function importFromCsv(filename) {
     var data = require('fs').readFileSync(filename, 'utf-8');
+    var row;
+    var name;
+    var phone;
+    var email;
+    var i = 1;
 
-    // Ваша чёрная магия:
-    // - Разбираете записи из `data`
-    // - Добавляете каждую запись в книгу
+    while (data.indexOf('\n') >= 0) {
+        row = data.slice(0, data.indexOf('\n'));
+
+        name = null;
+        phone = null;
+        email = null;
+
+        name = row.slice(0, row.indexOf(';'));
+        row = row.slice(row.indexOf(';') + 1);
+
+        phone = row.slice(0, row.indexOf(';'));
+        row = row.slice(row.indexOf(';') + 1);
+
+        email = row;
+
+        if (name && phone && email) {
+            module.exports.add(name, phone, email);
+        } else {
+            console.error('Не удалось добавить строчку' + i);
+        }
+
+        data = data.slice(data.indexOf('\n') + 1);
+        i++;
+    }
 };
 
 /*
