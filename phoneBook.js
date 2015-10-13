@@ -7,16 +7,16 @@ var phoneBook = []; // Здесь вы храните записи как хот
    На вход может прийти что угодно, будьте осторожны.
 */
 module.exports.add = function add(name, phone, email) {
-    var phoneRegex = /^[+]?[0-9]+[ ]?((\([0-9]+)\)|[0-9]+)[ ]?([0-9]|-| )+$/;
-    var emailregex = /^[A-Z,a-z,0-9,А-Я,а-я]+@[A-Z,a-z,0-9,А-Я,а-я,\.,-]+\.[A-Z,a-z,0-9,А-Я,а-я]+$/;
-    if (phoneRegex.test(phone) && emailregex.test(email)) {
+    var phoneRegex = /^([+]?[0-9]+|[0-9]*)+[ ]?((\([0-9]{3})\)|[0-9]{3})[ ]?[0-9][0-9 \-]{6,8}$/;
+    var emailRegex = /^[A-Za-z0-9А-Яа-я\-_]+@[A-Za-z0-9А-Яа-я\.\-_]+\.[A-Za-z0-9А-Яа-я]+$/;
+    if (phoneRegex.test(phone) && emailRegex.test(email)) {
         var contact = {
             name: name,
             phone: phone,
             email: email
         };
-        phoneBook.push(contact);
-        return contact;
+        var i = phoneBook.push(contact) - 1;
+        return phoneBook[i];
     } else {
         return false;
     }
