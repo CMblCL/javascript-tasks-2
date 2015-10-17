@@ -8,13 +8,16 @@ var phoneBook = []; // Здесь вы храните записи как хот
 */
 module.exports.add = function add(name, phone, email) {
     var phoneRegex = /^([+]?[0-9]+|[0-9]*)+[ ]?((\([0-9]{3})\)|[0-9]{3})[ ]?[0-9][0-9 \-]{6,8}$/;
-    var emailRegex = /^[A-Za-z0-9А-Яа-я\-_]+@[A-Za-z0-9А-Яа-я\.\-_]+\.[A-Za-z0-9А-Яа-я]+$/;
+    var emailRegex = /^[A-Za-z0-9\.\-_]+@[A-Za-z0-9А-ЯЁа-яё\.\-_]+\.[A-Za-z0-9А-ЯЁа-яё]{2,}$/;
     if (phoneRegex.test(phone) && emailRegex.test(email)) {
         var contact = {
             name: name,
             phone: phone,
             email: email
         };
+        if (!contact.name) {
+            contact.name = phone;
+        }
         var i = phoneBook.push(contact) - 1;
         return phoneBook[i];
     } else {
@@ -23,24 +26,40 @@ module.exports.add = function add(name, phone, email) {
 };
 
 /*
-   Функция поиска записи в телефонную книгу.
+    Выводит содержимое контакта через ','
+*/
+function showContacts(contacts) {
+    for (var i = 0, j = contacts.length; i < j; i++) {
+        console.log(contacts[i].name + ', ' + contacts[i].phone + ', ' + contacts[i].email);
+    }
+}
+
+/*
+    Проверяет есть ли в полях контакта строка поиска
+*/
+function queryInContact(query, contact) {
+    return (contact.name.toLowerCase().includes(query.toLowerCase()) ||
+            contact.phone.toLowerCase().includes(query.toLowerCase()) ||
+            contact.email.toLowerCase().includes(query.toLowerCase())
+    );
+    //return (contact.name.indexOf(query) >= 0 || contact.phone.indexOf(query) >= 0 || contact.email.indexOf(query) >= 0);
+}
+
+
+/*
+   Функция поиска записи в телефонной книге.
    Поиск ведется по всем полям.
 */
 module.exports.find = function find(query) {
+    var foundContacts;
     if (query === undefined) {
-        for (var i = phoneBook.length - 1; i >= 0; i--) {
-            console.log(phoneBook[i].name + ', ' + phoneBook[i].phone + ', ' + phoneBook[i].email);
-        }
+        foundContacts = phoneBook;
     } else {
-        for (var i = phoneBook.length - 1; i >= 0; i--) {
-            if (phoneBook[i].name.indexOf(query) >= 0 ||
-            phoneBook[i].phone.indexOf(query) >= 0 ||
-            phoneBook[i].email.indexOf(query) >= 0) {
-                console.log(phoneBook[i].name + ', ' +
-                            phoneBook[i].phone + ', ' + phoneBook[i].email);
-            }
-        }
+        foundContacts = phoneBook.filter(function (contact) {
+            return queryInContact(query, contact);
+        });
     }
+    showContacts(foundContacts);
 };
 
 /*
@@ -49,91 +68,69 @@ module.exports.find = function find(query) {
 module.exports.remove = function remove(query) {
     var removeCount = 0;
     for (var i = phoneBook.length - 1; i >= 0; i--) {
-        if (phoneBook[i].name.indexOf(query) >= 0 ||
-        phoneBook[i].phone.indexOf(query) >= 0 ||
-        phoneBook[i].email.indexOf(query) >= 0) {
+        if (queryInContact(query, phoneBook[i])) {
             phoneBook.splice(i, 1);
-            //phoneBook[i] = undefined;
             removeCount++;
         }
     }
-    console.log('Удален ' + removeCount + ' контакт(ов)');
+    console.log('Удалено контактов: ' + removeCount);
 };
 
 /*
    Функция импорта записей из файла (задача со звёздочкой!).
 */
 module.exports.importFromCsv = function importFromCsv(filename) {
-    var data = require('fs').readFileSync(filename, 'utf-8');
+    var rows = require('fs').readFileSync(filename, 'utf-8').replace(/\r/g, '').split('\n');
     var row;
-    var name;
-    var phone;
-    var email;
-    var i = 1;
 
-    while (data.indexOf('\n') >= 0) {
-        row = data.slice(0, data.indexOf('\n'));
-
-        name = null;
-        phone = null;
-        email = null;
-
-        name = row.slice(0, row.indexOf(';'));
-        row = row.slice(row.indexOf(';') + 1);
-
-        phone = row.slice(0, row.indexOf(';'));
-        row = row.slice(row.indexOf(';') + 1);
-
-        email = row;
-
-        if (name && phone && email) {
-            module.exports.add(name, phone, email);
+    for (var i = 0, j = rows.length; i < j; i++) {
+        row = rows[i].split(';');
+        if (row.length == 3) {
+            if (!module.exports.add(row[0], row[1], row[2])) {
+                console.error('Не удалось добавить строчку ' + (i + 1) + '. Неправильный формат данных.');
+            }
         } else {
-            console.error('Не удалось добавить строчку' + i);
+            console.error('Не удалось добавить строчку ' + (i + 1));
         }
-
-        data = data.slice(data.indexOf('\n') + 1);
-        i++;
     }
 };
+
+
+/*
+   Формирует поле для вывода в таблице
+*/
+function createField(length, data) {
+    var row = '';
+    if (data.length > length) {
+        row += data.slice(0, length - 3) + '..';
+    } else {
+        var spaceWidth = length - data.length;
+        row += data;
+        for (var j = 0; j < spaceWidth; j++) {
+            row += ' ';
+        }
+    }
+    return row;
+}
 
 /*
    Функция вывода всех телефонов в виде ASCII (задача со звёздочкой!).
 */
 module.exports.showTable = function showTable() {
-    var rowWidth = 25;
     var spaceWidth = 0;
-    var row;
-    console.log('┌─────────────────────────┬─────────────────────────┬─────────────────────────┐');
-    console.log('│           Имя           │         Телефон         │          email          │');
-    console.log('├─────────────────────────┼─────────────────────────┼─────────────────────────┤');
+    var row = '';
+    var rowWidth = {name: 25, phone: 20, email: 30};
+    console.log('┌─────────────────────────┬────────────────────┬──────────────────────────────┐');
+    console.log('│           Имя           │      Телефон       │             Email            │');
+    console.log('├─────────────────────────┼────────────────────┼──────────────────────────────┤');
 
-    for (var i = phoneBook.length - 1; i >= 0; i--) {
-        row = '│ ';
-
-        spaceWidth = rowWidth - phoneBook[i].name.length - 1;
-        row += phoneBook[i].name;
-        for (var j = 0; j < spaceWidth; j++) {
-            row += ' ';
-        }
-        row += '│ ';
-
-        spaceWidth = rowWidth - phoneBook[i].phone.length - 1;
-        row += phoneBook[i].phone;
-        for (var j = 0; j < spaceWidth; j++) {
-            row += ' ';
-        }
-        row += '│ ';
-
-        spaceWidth = rowWidth - phoneBook[i].email.length - 1;
-        row += phoneBook[i].email;
-        for (var j = 0; j < spaceWidth; j++) {
-            row += ' ';
-        }
-        row += '│';
-
+    for (var i = 0, l = phoneBook.length; i < l; i++) {
+        row = '│';
+        row += createField(rowWidth.name, phoneBook[i].name) + '│';
+        row += createField(rowWidth.phone, phoneBook[i].phone) + '│';
+        row += createField(rowWidth.email, phoneBook[i].email) + '│';
         console.log(row);
         //console.log(phoneBook[i].name + ' ' + phoneBook[i].phone + ' ' + phoneBook[i].email);
     }
-    console.log('└─────────────────────────┴─────────────────────────┴─────────────────────────┘');
+    console.log('└─────────────────────────┴────────────────────┴──────────────────────────────┘');
 };
